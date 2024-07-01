@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto, UpdateUserDto } from './user.dto';
+import { User } from './user.entity';
 
 @Controller('users')
 export class UserController {
@@ -19,14 +20,18 @@ export class UserController {
     @Body()
     createUserDto: CreateUserDto,
   ) {
-    return this.userService.createUser(
+    const user = new User(
       createUserDto.name,
       createUserDto.email,
       createUserDto.password,
       createUserDto.cpf,
       createUserDto.userType,
+      undefined, // id será definido no serviço
+      undefined, // employeeCode será definido no serviço
       createUserDto.superPassword,
     );
+
+    return this.userService.createUser(user);
   }
 
   @Get(':id')
@@ -41,15 +46,16 @@ export class UserController {
 
   @Put(':id')
   updateUser(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.userService.updateUser(
+    const userToUpdate: User = {
       id,
-      updateUserDto.name,
-      updateUserDto.email,
-      updateUserDto.password,
-      updateUserDto.cpf,
-      updateUserDto.userType,
-      updateUserDto.superPassword,
-    );
+      name: updateUserDto.name,
+      email: updateUserDto.email,
+      password: updateUserDto.password,
+      cpf: updateUserDto.cpf,
+      userType: updateUserDto.userType,
+      superPassword: updateUserDto.superPassword,
+    };
+    return this.userService.updateUser(userToUpdate);
   }
 
   @Delete(':id')
