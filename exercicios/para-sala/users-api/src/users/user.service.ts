@@ -4,108 +4,113 @@ import { User } from './user.entity';
 @Injectable()
 export class UserService {
   private users: User[] = [];
-  REGEX_EMAIL_VALID = '/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$';
-  REGEX_PASSWORD_VALID =
-    '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$/';
+  REGEX_EMAIL_VALID = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  REGEX_CPF_INVALID = /^\d{3}\.\d{3}\.\d{3}\-\d{2}$/;
+  REGEX_PASSWORD_VALID = /^(?=.*[A-Z])(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  REGEX_SUPER_PASSWORD_VALID =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
   EMAIL_ERROR_MESSAGE = 'Invalid email';
-  PASSWORD__ERROR_MESSAGE = 'Invalid password';
+  CPF_ERROR_MESSAGE = 'Invalid CPF';
+  PASSWORD_ERROR_MESSAGE = 'Invalid password';
+  SUPER_PASSWORD__ERROR_MESSAGE = 'Invalid super password';
 
-  verifyRegex(regexString: string, value: string): boolean {
-    // Use o método test da RegExp
-    const regex = new RegExp(regexString);
-    return !regex.test(value);
+  CPF = 'CPF';
+  EMAIL = 'Email';
+  IN_USO_ERROR_MESSAGE = {
+    [this.CPF]: ' already in use',
+    [this.EMAIL]: ' already in use',
+  };
+
+  verifyRegex(regex, value, messageErro) {
+    if (!regex.test(value)) {
+      throw new Error(messageErro);
+    }
+  }
+  checkIfEmailInUse(email, errorMessage) {
+    if (this.users.some((iUser) => iUser.email === email)) {
+      throw new Error(errorMessage);
+    }
+  }
+  checkIfCpfInUse(cpf, errorMessage) {
+    if (this.users.some((iUser) => iUser.cpf === cpf)) {
+      throw new Error(errorMessage);
+    }
   }
 
   createUser(user: User): User {
     // valida user data
-
-    if (this.verifyRegex(this.REGEX_EMAIL_VALID, user.email)) {
-      throw new Error(this.EMAIL_ERROR_MESSAGE);
+    this.verifyRegex(
+      this.REGEX_EMAIL_VALID,
+      user.email,
+      this.EMAIL_ERROR_MESSAGE,
+    );
+    this.verifyRegex(
+      this.REGEX_PASSWORD_VALID,
+      user.password,
+      this.PASSWORD_ERROR_MESSAGE,
+    );
+    if (user.superPassword) {
+      this.verifyRegex(
+        this.REGEX_SUPER_PASSWORD_VALID,
+        user.password,
+        this.SUPER_PASSWORD__ERROR_MESSAGE,
+      );
+    }
+    this.checkIfEmailInUse(user.email, this.IN_USO_ERROR_MESSAGE[this.EMAIL]);
+    this.checkIfCpfInUse(user.cpf, this.IN_USO_ERROR_MESSAGE[this.CPF]);
+    this.verifyRegex(this.REGEX_CPF_INVALID, user.cpf, this.CPF_ERROR_MESSAGE);
+    const cpfWithoutDots = user.cpf.replace(/[^\d]+/g, '');
+    if (cpfWithoutDots.length !== 11) {
+      throw new Error('Invalid CPF');
     } else {
-      if (this.verifyRegex(this.REGEX_PASSWORD_VALID, user.password))
-        {
-        throw new Error('Invalid password');
-      } else {
-        if (
-          user.superPassword &&
-          !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(
-            user.superPassword,
-          )
-        ) {
-          throw new Error(this.PASSWORD__ERROR_MESSAGE);
-        } else {
-          if (this.users.some((iUser) => iUser.email === user.email)) {
-            throw new Error('Email already in use');
-          } else {
-            if (this.users.some((iUser) => iUser.cpf === user.cpf)) {
-              throw new Error('CPF already in use');
-            } else {
-              if (!/^\d{3}\.\d{3}\.\d{3}\-\d{2}$/.test(user.cpf)) {
-                throw new Error('Invalid CPF');
-              } else {
-                const cpfWithoutDots = user.cpf.replace(/[^\d]+/g, '');
-                if (cpfWithoutDots.length !== 11) {
-                  throw new Error('Invalid CPF');
-                } else {
-                  // Elimina CPFs conhecidos que são inválidos
-                  if (
-                    cpfWithoutDots === '00000000000' ||
-                    cpfWithoutDots === '11111111111' ||
-                    cpfWithoutDots === '22222222222' ||
-                    cpfWithoutDots === '33333333333' ||
-                    cpfWithoutDots === '44444444444' ||
-                    cpfWithoutDots === '55555555555' ||
-                    cpfWithoutDots === '66666666666' ||
-                    cpfWithoutDots === '77777777777' ||
-                    cpfWithoutDots === '88888888888' ||
-                    cpfWithoutDots === '99999999999'
-                  ) {
-                    throw new Error('Invalid CPF');
-                  }
+      // Elimina CPFs conhecidos que são inválidos
+      if (
+        cpfWithoutDots === '00000000000' ||
+        cpfWithoutDots === '11111111111' ||
+        cpfWithoutDots === '22222222222' ||
+        cpfWithoutDots === '33333333333' ||
+        cpfWithoutDots === '44444444444' ||
+        cpfWithoutDots === '55555555555' ||
+        cpfWithoutDots === '66666666666' ||
+        cpfWithoutDots === '77777777777' ||
+        cpfWithoutDots === '88888888888' ||
+        cpfWithoutDots === '99999999999'
+      ) {
+        throw new Error('Invalid CPF');
+      }
+      let sum = 0;
+      let remainder;
 
-                  let sum = 0;
-                  let remainder;
+      // Calcula o primeiro dígito verificador
+      for (let i = 1; i <= 9; i++) {
+        sum += parseInt(cpfWithoutDots.substring(i - 1, i)) * (11 - i);
+      }
 
-                  // Calcula o primeiro dígito verificador
-                  for (let i = 1; i <= 9; i++) {
-                    sum +=
-                      parseInt(cpfWithoutDots.substring(i - 1, i)) * (11 - i);
-                  }
+      remainder = (sum * 10) % 11;
 
-                  remainder = (sum * 10) % 11;
+      if (remainder === 10 || remainder === 11) {
+        remainder = 0;
+      }
 
-                  if (remainder === 10 || remainder === 11) {
-                    remainder = 0;
-                  }
+      if (remainder !== parseInt(cpfWithoutDots.substring(9, 10))) {
+        throw new Error('Invalid CPF');
+      }
 
-                  if (remainder !== parseInt(cpfWithoutDots.substring(9, 10))) {
-                    throw new Error('Invalid CPF');
-                  }
+      sum = 0;
 
-                  sum = 0;
+      // Calcula o segundo dígito verificador
+      for (let i = 1; i <= 10; i++) {
+        sum += parseInt(cpfWithoutDots.substring(i - 1, i)) * (12 - i);
+      }
 
-                  // Calcula o segundo dígito verificador
-                  for (let i = 1; i <= 10; i++) {
-                    sum +=
-                      parseInt(cpfWithoutDots.substring(i - 1, i)) * (12 - i);
-                  }
+      remainder = (sum * 10) % 11;
 
-                  remainder = (sum * 10) % 11;
+      if (remainder === 10 || remainder === 11) {
+        remainder = 0;
+      }
 
-                  if (remainder === 10 || remainder === 11) {
-                    remainder = 0;
-                  }
-
-                  if (
-                    remainder !== parseInt(cpfWithoutDots.substring(10, 11))
-                  ) {
-                    throw new Error('Invalid CPF');
-                  }
-                }
-              }
-            }
-          }
-        }
+      if (remainder !== parseInt(cpfWithoutDots.substring(10, 11))) {
+        throw new Error('Invalid CPF');
       }
     }
     const userCode = `${Date.now().toString()}${this.users.length}`;
@@ -114,6 +119,7 @@ export class UserService {
     this.users.push(user);
     return user;
   }
+
   createUserOld(
     name: string,
     email: string,
