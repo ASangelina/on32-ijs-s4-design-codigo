@@ -4,17 +4,26 @@ import { User } from './user.entity';
 @Injectable()
 export class UserService {
   private users: User[] = [];
+  REGEX_EMAIL_VALID = '/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$';
+  REGEX_PASSWORD_VALID =
+    '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$/';
+  EMAIL_ERROR_MESSAGE = 'Invalid email';
+  PASSWORD__ERROR_MESSAGE = 'Invalid password';
+
+  verifyRegex(regexString: string, value: string): boolean {
+    // Use o método test da RegExp
+    const regex = new RegExp(regexString);
+    return !regex.test(value);
+  }
 
   createUser(user: User): User {
     // valida user data
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email)) {
-      throw new Error('Invalid email');
+
+    if (this.verifyRegex(this.REGEX_EMAIL_VALID, user.email)) {
+      throw new Error(this.EMAIL_ERROR_MESSAGE);
     } else {
-      if (
-        !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(
-          user.password,
-        )
-      ) {
+      if (this.verifyRegex(this.REGEX_PASSWORD_VALID, user.password))
+        {
         throw new Error('Invalid password');
       } else {
         if (
@@ -23,7 +32,7 @@ export class UserService {
             user.superPassword,
           )
         ) {
-          throw new Error('Invalid super password');
+          throw new Error(this.PASSWORD__ERROR_MESSAGE);
         } else {
           if (this.users.some((iUser) => iUser.email === user.email)) {
             throw new Error('Email already in use');
